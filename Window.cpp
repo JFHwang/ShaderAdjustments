@@ -1,0 +1,411 @@
+#include <iostream>
+
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+
+#include "Window.h"
+#include "Cube.h"
+#include "Matrix4.h"
+#include "Globals.h"
+#include "Sphere.h"
+#include "Group.h"
+#include "Frustum.h"
+#include "SkyBox.h"
+#include "Game.h"
+
+int Window::width = 900; //Set window width in pixels here
+int Window::height = 900; //Set window height in pixels here
+float Window::spinDelta = .005;
+
+
+enum Control {
+    OBJ = 0, POINT = 1, SPOT = 2, DIRECT = 3, CAMERA = 4
+};
+
+static Control keyState = CAMERA;
+static Game* game = new Game();
+static Shader* phongShader= NULL;
+static Shader* geometryPassShader = NULL;
+static Shader* deferredPassShader = NULL;
+
+
+void Window::initialize(void) {
+    //Setup the light
+    Globals::point.setPosition(Vector4(-66, -100, -66.5, 500));
+    Globals::point.quadraticAttenuation = 1.15;
+    Globals::point.constantAttenuation = 5.85;
+    Globals::point.linearAttenuation = 5.85;
+    
+    Globals::spotLight.setPosition(Vector4(-2.5, -2.5, 7.5, 0));
+    Globals::directional.setPosition(Vector4(0, 0, 5555, 0));
+    Globals::directional.scaleIntensity(.25f);
+    phongShader = new Shader("VShader.c", "LShader.c");
+	geometryPassShader = new Shader("gPass.vert", "gPass.frag");
+	deferredPassShader = new Shader("deferredPass.vert", "deferredPass.frag");
+ 
+    glEnable(GL_NORMALIZE);
+	
+	setupGBuffer();	
+}
+
+
+void Window::idleCallback() {
+    static int frameCount = 0;
+    static int currentTime = 0, previousTime = 0;
+    static int lastFrame = 0;
+
+    ++frameCount;
+
+    //  Get the number of milliseconds since glutInit called
+    //  (or first call to glutGet(GLUT ELAPSED TIME)).
+    currentTime = glutGet(GLUT_ELAPSED_TIME);
+
+    //  Calculate time passed
+    int timeInterval = currentTime - previousTime;
+
+    if (timeInterval > 1000) {
+        //  calculate the number of frames per second
+        float fps = frameCount / (timeInterval / 1000.0f);
+        std::cout << "FPS: " << fps << std::endl;
+
+        //  Set time
+        previousTime = currentTime;
+
+        //  Reset frame count
+        frameCount = 0;
+    }
+
+
+
+    //Set up a static time delta for update calls
+    Globals::updateData.dt = (currentTime - lastFrame) / 1000.0; // 60 fps
+    lastFrame = currentTime;
+
+    static int tick = 0;
+
+    game->update(++tick);
+
+
+    displayCallback();
+}
+
+
+void Window::reshapeCallback(int w, int h) {
+    width = w; //Set the window width
+    height = h; //Set the window height
+    glViewport(0, 0, w, h); //Set new viewport size
+    glMatrixMode(GL_PROJECTION); //Set the OpenGL matrix mode to Projection
+    glLoadIdentity(); //Clear the projection matrix by loading the identity
+    gluPerspective(60.0, double(width) / (double) height, .5, 256.0); //Set perspective projection viewing frustum
+    Frustum::update(width, height);
+}
+
+
+void Window::displayCallback() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadMatrixf(Globals::camera.getInverseMatrix().ptr());
+    glPushMatrix();
+
+    //Replace the current top of the matrix stack with the inverse camera matrix
+    //This will convert all world coordiantes into camera coordiantes
+    glLoadMatrixf(Globals::camera.getInverseMatrix().ptr());
+
+	Globals::directional.bind();
+/*  Globals::spotLight.bind();
+    Globals::point.setPosition(game->ball->getTranslation());
+    Globals::point.bind();
+
+    game->ball->ballLight.setPosition(game->ball->getTranslation());
+    game->ball->ballLight.bind();
+      
+    MatrixStack stack(Matrix4::identity());
+    MatrixStack s2 = stack;
+
+	//phongShader->bind();
+*/    
+	
+	////////////
+	//Geometry pass. This renders the first pass image into the gBuffer (not what's displayed)
+	////////////
+	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	Matrix4 projection = gl_ProjectionMatrix;
+	Matrix4 view = camera.getMatrix();
+	Matrix4 model;
+	geometryPassShader->bind();
+	//Pass projection and view uniforms to the gPass shader
+	glUniformMatrix4fv(getUniformLocation(geometryPassShader.getPid(), "projection"), 1, GL_FALSE, projection.ptr());
+	glUniformMatrix4fv(getUniformLocation(geometryPassShader.getPid(), "view"), 1, GL_FALSE, view.ptr());
+	
+	//Here the tutorial tracks each model's location. But evan has that encapsulated
+	//Within a draw function. Is this necessary?
+	glBindFrameBuffer(GL_FRAMEBUFFER, 0);
+	//deferred lighting pass
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    deferredPassShader->bind();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gPosition);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, gNormal);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, gSpec);
+	//
+    glUniform3fv(glGetUniformLocation(deferredPassShader->getPid(), "viewPos"), 1, &camera.Position[0]);
+      
+	//Pack gBuffer's depth buffer into the framebuffer
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glBlitFramebuffer(0,0,Window::width, Window::height, 0, 0,Window::width, Window::height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+	glBindFramebuffer(GL_FRAMEBUFFER,0);
+	
+	
+	
+	game->draw(stack);
+    //phongShader->unbind();
+    
+    //Globals::point.draw(s2);
+    
+   // Globals::point.draw(Globals::drawData);
+   // Globals::spotLight.draw(Globals::drawData);
+
+    //Pop off the changes we made to the matrix stack this frame
+    glPopMatrix();
+
+
+    glFlush();
+    glutSwapBuffers();
+
+}
+
+
+
+/*
+ * Helper Function
+ * Sets up the GBuffer
+ */
+void Window::setupGBuffer() {
+	//Setting up samplers
+	deferredPassShader->bind();
+	glUniform1i(glGetUniformLocation(deferredPassShader->getPid(), "gPosition"), 0);
+	glUniform1i(glGetUniformLocation(deferredPassShader->getPid(), "gNormal"), 1);
+	glUniform1i(glGetUniformLocation(deferredPassShader->getPid(), "gSpec"), 2);
+   
+	//Setting up G-buffer
+	//Buffer is necessary so that shader can access data from all pixels when evaluating a certain pixel
+	GLuint gBuffer;
+	glGenFramebuffers(1, &gBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer));
+	
+	//Set up the 3 textures that go in the buffer 
+	//(Note: Depth is unnecessary since it can be calculated from gPosition and camera position)
+	
+	//Position buffer
+	GLuint gPosition, gNormal, gSpec;
+	glGenTextures(1, &gPosition);
+	glBindTexture(GL_TEXTURE_2D, gPosition);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Window::width, Window::height, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
+	
+	//Normal Buffer
+	glGenTextures(1, &gNormal);
+	glBindTexture(GL_TEXTURE_2D, gNormal);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Window::width, Window::height, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
+	
+	//Specular buffer
+	glGenTextures(1, &gSpec);
+	glBindTexture(GL_TEXTURE_2D, gSpec);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Window::width, Window::height, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gSpec, 0);
+	
+	//Specify which color attachments to use in this framebuffer
+	GLuint attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
+	glDrawBuffers(3, attachments);
+
+	//Adding a depth buffer just because the tutorial has it
+	GLuint rboDepth;
+    glGenRenderbuffers(1, &rboDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+	
+    //Make sure framebuffer is complete
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Framebuffer not complete!" << std::endl;
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+}
+
+
+
+
+const float scaleFactor = .95;
+const float orbitDelta = 3.14159265 / 180 * 5; // 3.141592 / 180  == 1 degree;   
+const float moveDelta = .1;
+
+const Matrix4 xt = Matrix4().makeTranslate(moveDelta, 0, 0);
+const Matrix4 nxt = Matrix4().makeTranslate(-moveDelta, 0, 0);
+
+const Matrix4 yt = Matrix4().makeTranslate(0, moveDelta, 0);
+const Matrix4 nyt = Matrix4().makeTranslate(0, -moveDelta, 0);
+
+const Matrix4 zt = Matrix4().makeTranslate(0, 0, moveDelta);
+const Matrix4 nzt = Matrix4().makeTranslate(0, 0, -moveDelta);
+
+const Matrix4 scalaUp = Matrix4().makeScale(1 / scaleFactor, 1 / scaleFactor, 1 / scaleFactor);
+const Matrix4 scalaDown = Matrix4().makeScale(scaleFactor, scaleFactor, scaleFactor);
+
+const Matrix4 orbit = Matrix4().makeRotateZ(orbitDelta);
+const Matrix4 reverseOrbit = Matrix4().makeRotateZ(-orbitDelta);
+
+
+bool Window::handleKeypress(unsigned char key) {
+
+    if (key >= '0' && key <= '4'){
+        keyState = (Control) (key - '0');
+        return true;
+    }
+    
+    
+    switch (key) {
+        case 'b': Globals::isBoundsOn = !Globals::isBoundsOn;
+            break;
+        case 'A': Globals::isAnimated = !Globals::isAnimated;
+            break;
+        default: return false;
+    }
+    
+    return true;
+}
+
+void Window::specialKeys(int key, int x, int y) {
+    if (keyState == CAMERA) {
+        switch (key) {
+            case GLUT_KEY_UP:
+                Globals::camera.rotateX(10 * spinDelta);
+                return;
+            case GLUT_KEY_DOWN:
+                Globals::camera.rotateX(10 * -spinDelta);
+                return;
+            case GLUT_KEY_LEFT:
+                Globals::camera.rotateY(10 * spinDelta);
+                return;
+            case GLUT_KEY_RIGHT:
+                Globals::camera.rotateY(-10 * spinDelta);
+                return;
+        }
+    }
+}
+
+class Listener : public Mouse {
+    Vector3 lastTrack;
+
+public:
+
+    Listener() {
+        lastTrack = Vector3(0, 0, 0);
+    }
+
+    Vector3 trackBallMapping(Point point) {
+        Vector3 v((2.0 * point.x - Window::width) / Window::width, (Window::height - 2.0 * point.y) / Window::height, 0);
+        double d = v.magnitude(); // this is the distance from the trackball's origin to the mouse location, without considering depth (=in the plane of the trackball's origin)
+        d = (d < 1.0) ? d : 1.0; // this limits d to values of 1.0 or less to avoid square roots of negative values in the following line
+
+        v.set(2, sqrt(1.001 - d * d));
+        return v.normalize();
+    }
+
+    void onLeftClick() override {
+    }
+
+    void onRightClick() override {
+    }
+
+    void onMiddleClick() override {
+    }
+
+    void onLeftDrag(Point prev, Point next) override {
+        Vector3 mapped = trackBallMapping(next);
+        Vector3 cross = lastTrack.cross(mapped);
+
+        cross = cross.normalize();
+        lastTrack = mapped;
+
+        Matrix4 r = Matrix4().makeRotateArbitrary(cross, .05);
+
+        switch (keyState) {
+            case OBJ:
+                break;
+            case POINT:
+                Globals::point.toWorld.applyOther(r);
+                break;
+            case SPOT:
+                Globals::spotLight.toWorld.applyOther(r);
+                break;
+            case DIRECT:
+                Globals::directional.toWorld.applyOther(r);
+                break;
+            case CAMERA:
+                Globals::camera.translate((prev.toV() - next.toV()).multiply(Vector3(.1, -.1, 1)));
+        }
+    }
+
+    void onRightDrag(Point prev, Point next) override {
+        Point diff = next.minus(prev);
+
+        Vector3 dp = diff.scale(1.0 / 25);
+        if (keyState == SPOT) {
+            if (abs(diff.x) > abs(diff.y)) {
+                Globals::spotLight.exp += (diff.x > 0) ? 1 : -1;
+            } else {
+                Globals::spotLight.angle += (diff.y > 0) ? 1 : -1;
+            }
+        }
+    }
+
+    void onMouseScroll(State direction) override {
+
+
+        if (direction == UP) {
+            if (keyState == POINT) {
+                Vector3 dist = Globals::point.toWorld.getColumn(3).toVector3();
+                Globals::point.setPosition(dist.scale(1.05).toVector4(1) + Vector4(0, 0, .1, 0));
+            } else if (keyState == SPOT) {
+                Vector3 dist = Globals::spotLight.toWorld.getColumn(3).toVector3();
+                Globals::spotLight.setPosition(dist.scale(1.05).toVector4(1) + Vector4(0, 0, .1, 0));
+            } else if (keyState == CAMERA) {
+                Globals::camera.translate(Vector3(0, 0, -1));
+            }
+        } else {
+            if (keyState == POINT) {
+                Vector3 dist = Globals::point.toWorld.getColumn(3).toVector3();
+                Globals::point.setPosition(dist.scale(.95).toVector4(1)+ Vector4(0, 0, -.1, 0));
+            } else if (keyState == SPOT) {
+                Vector3 dist = Globals::spotLight.toWorld.getColumn(3).toVector3();
+                Globals::spotLight.setPosition(dist.scale(.95).toVector4(1)+ Vector4(0, 0, -.1, 0));
+            } else if (keyState == CAMERA) {
+                Globals::camera.translate(Vector3(0, 0, 1));
+            }
+        }
+    }
+
+
+};
+static Mouse* mouseListener = new Listener();
+
+
+
+//TODO: Mouse callbacks!
+
+//TODO: Mouse Motion callbacks!
