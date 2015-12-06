@@ -33,6 +33,9 @@ static Shader* deferredPassShader = NULL;
 GLuint positionID;
 GLuint normalID;
 GLuint specID;
+GLuint gPositionTexture;
+GLuint gNormalTexture;
+GLuint gSpecTexture;
 
 void Window::initialize(void) {
     //Setup the light
@@ -179,17 +182,17 @@ void Window::displayCallback() {
 
 	glActiveTextureARB(GL_TEXTURE0_ARB);
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, geometryPassShader->getDiffuseTexture());
+	glBindTexture(GL_TEXTURE_2D, gSpecTexture);
 	glUniform1iARB ( specID, 0 );
 	
 	glActiveTextureARB(GL_TEXTURE1_ARB);
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, m_fboRenderTexture->getPositionTexture());
+	glBindTexture(GL_TEXTURE_2D, gPositionTexture);
 	glUniform1iARB ( positionID, 1 );
 	
 	glActiveTextureARB(GL_TEXTURE2_ARB);
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, m_fboRenderTexture->getNormalsTexture());
+	glBindTexture(GL_TEXTURE_2D, gNormalTexture);
 	glUniform1iARB ( normalID, 2 );
 
 	// Render the quad
@@ -257,9 +260,6 @@ void Window::setupGBuffer() {
 	GLuint gNormal; 
 	GLuint gSpec;
 	GLuint depthBuffer;
-        GLuint gPositionTexture;
-        GLuint gNormalTexture;
-        GLuint gSpecTexture;
         
 	//Setting up G-buffer
 	//Buffer is necessary so that shader can access data from all pixels when evaluating a certain pixel
