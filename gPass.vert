@@ -1,28 +1,16 @@
-#version 330 core
-layout (location = 0) in vec3 position;
-layout (location = 1) in vec3 normal;
-layout (location = 2) in vec2 texCoords;
+varying vec3 normals;
+varying vec4 position;
+uniform mat4 ModelMatrix;
+uniform mat4 WorldMatrix;
 
-out vec3 FragPos;
-out vec2 TexCoords;
-out vec3 Normal;
-
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
-
-void main()
+void main( void )
 {
-    //vec4 worldPos = model * vec4(position, 1.0f);
-	vec4 worldPos = gl_ModelViewMatrix * gl_Vertex;
-	FragPos = worldPos.xyz;
+	// Move the normals back from the camera space to the world space
+	mat3 worldRotationInverse = transpose(mat3(WorldMatrix));
 	
-    //gl_Position = projection * view * worldPos;
-	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
-	
-    TexCoords = texCoords;
-    
-    mat3 normalMatrix = transpose(inverse(mat3(model)));
-    Normal = normalize(gl_NormalMatrix * gl_Normal);
+	gl_Position		= gl_ModelViewProjectionMatrix * gl_Vertex;
+	gl_TexCoord[0]	= gl_MultiTexCoord0;
+	normals			= normalize(worldRotationInverse * gl_NormalMatrix * gl_Normal);
+	position		= gl_ModelViewMatrix * gl_Vertex;
+    gl_FrontColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
-

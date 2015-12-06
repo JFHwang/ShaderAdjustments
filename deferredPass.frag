@@ -1,49 +1,22 @@
-#version 330 core
-out vec4 FragColor;
-in vec2 TexCoords;
+uniform sampler2D tDiffuse; 
+uniform sampler2D tPosition;
+uniform sampler2D tNormals;
+uniform vec3 cameraPosition;
 
-uniform sampler2D gPosition;
-uniform sampler2D gNormal;
-uniform sampler2D gSpec;
-
-struct Light {
-    vec3 Position;
-    vec3 Color;
-    
-    float Linear;
-    float Quadratic;
-};
-
-uniform vec3 viewPos;
-
-void main()
-{             
-    // Retrieve data from gbuffer
-    vec3 FragPos = texture(gPosition, TexCoords).rgb;
-    vec3 Normal = texture(gNormal, TexCoords).rgb;
-    vec3 Diffuse = texture(gSpec, TexCoords).rgb;
-    float Specular = texture(gSpec, TexCoords).a;
-    
-    // Then calculate lighting as usual
-    vec3 lighting  = Diffuse * 0.1; // hard-coded ambient component
-    vec3 viewDir  = normalize(viewPos - FragPos);
-	vec3 reflectRay = reflect(viewDir, Normal);
+void main( void )
+{
+	vec4 image = texture2D( tDiffuse, gl_TexCoord[0].xy );
+	vec4 position = texture2D( tPosition, gl_TexCoord[0].xy );
+	vec4 normal = texture2D( tNormals, gl_TexCoord[0].xy );
 	
-    for(int i = 0; i < NR_LIGHTS; ++i)
-    {
-        // Diffuse
-        vec3 lightDir = normalize(lights[i].Position - FragPos);
-        vec3 diffuse = max(dot(Normal, lightDir), 0.0) * Diffuse * lights[i].Color;
-        // Specular
-        vec3 halfwayDir = normalize(lightDir + viewDir);  
-        float spec = pow(max(dot(Normal, halfwayDir), 0.0), 16.0);
-        vec3 specular = lights[i].Color * spec * Specular;
-        // Attenuation
-        float distance = length(lights[i].Position - FragPos);
-        float attenuation = 1.0 / (1.0 + lights[i].Linear * distance + lights[i].Quadratic * distance * distance);
-        diffuse *= attenuation;
-        specular *= attenuation;
-        lighting += diffuse + specular;
-    }    
-    FragColor = vec4(lighting, 1.0);
+	vec3 light = vec3(50,100,50);
+	vec3 lightDir = light - position.xyz ;
+	
+	normal = normalize(normal);
+	lightDir = normalize(lightDir);
+	
+	vec3 eyeDir = normalize(cameraPosition-position.xyz);
+	vec3 vHalfVector = normalize(lightDir.xyz+eyeDir);
+	
+	gl_FragColor = max(dot(normal,lightDir),0) * image + pow(max(dot(normal,vHalfVector),0.0), 100) * 1.5;
 }

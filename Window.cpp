@@ -30,7 +30,9 @@ static Game* game = new Game();
 static Shader* phongShader= NULL;
 static Shader* geometryPassShader = NULL;
 static Shader* deferredPassShader = NULL;
-
+GLuint positionID;
+GLuint normalID;
+GLuint specID;
 
 void Window::initialize(void) {
     //Setup the light
@@ -47,6 +49,10 @@ void Window::initialize(void) {
 	deferredPassShader = new Shader("deferredPass.vert", "deferredPass.frag");
  
     glEnable(GL_NORMALIZE);
+	
+	positionID = glGetUniformLocationARB(deferredPassShader.getPid(),"gPosition");
+	normalsID = glGetUniformLocationARB(deferredPassShader.getPid(),"gNormals");
+	specID = glGetUniformLocationARB(deferredPassShader.getPid(),"gSpec");
 	
 	setupGBuffer();	
 }
@@ -128,43 +134,102 @@ void Window::displayCallback() {
 	//phongShader->bind();
 */    
 	
-	////////////
-	//Geometry pass. This renders the first pass image into the gBuffer (not what's displayed)
-	////////////
-	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	Matrix4 projection = gl_ProjectionMatrix;
-	Matrix4 view = camera.getMatrix();
-	Matrix4 model;
+
+	
 	geometryPassShader->bind();
-	//Pass projection and view uniforms to the gPass shader
-	glUniformMatrix4fv(getUniformLocation(geometryPassShader.getPid(), "projection"), 1, GL_FALSE, projection.ptr());
-	glUniformMatrix4fv(getUniformLocation(geometryPassShader.getPid(), "view"), 1, GL_FALSE, view.ptr());
-	
-	//Here the tutorial tracks each model's location. But evan has that encapsulated
-	//Within a draw function. Is this necessary?
-	glBindFrameBuffer(GL_FRAMEBUFFER, 0);
-	//deferred lighting pass
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    deferredPassShader->bind();
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, gPosition);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, gNormal);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, gSpec);
-	//
-    glUniform3fv(glGetUniformLocation(deferredPassShader->getPid(), "viewPos"), 1, &camera.Position[0]);
-      
-	//Pack gBuffer's depth buffer into the framebuffer
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, gBuffer);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	glBlitFramebuffer(0,0,Window::width, Window::height, 0, 0,Window::width, Window::height, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-	glBindFramebuffer(GL_FRAMEBUFFER,0);
-	
-	
-	
+
+////////////////////////////////////////////////////////////////	
+///////This section is taken directly from the example code///////
+///////////Not sure if right///////////////////////////
+	glPushAttrib(GL_VIEWPORT_BIT);
+	glViewport(0,0,m_width, m_height);
+
+	// Clear the render targets
+	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
+
+	glActiveTextureARB(GL_TEXTURE0_ARB);
+	glEnable(GL_TEXTURE_2D);
+
+	// Specify what to render an start acquiring
+	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_COLOR_ATTACHMENT2_EXT };
+	glDrawBuffers(3, buffers);
+/////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////
 	game->draw(stack);
+	geometryPassShader->unbind();
+	glPopAttrib();  /////////Not sure about this line either
+	
+	//render using 2nd pass shader
+////////////////////////////////////////////////////////////////
+//////Code taken directly from source code//////////////////////
+	//Projection setup
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glOrtho(0,m_width,0,m_height,0.1f,2);	
+	
+	//Model setup
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	
+	glUseProgramObjectARB(m_shader.m_programHandler);
+
+	glActiveTextureARB(GL_TEXTURE0_ARB);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, m_fboRenderTexture->getDiffuseTexture());
+	glUniform1iARB ( m_diffuseID, 0 );
+	
+	glActiveTextureARB(GL_TEXTURE1_ARB);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, m_fboRenderTexture->getPositionTexture());
+	glUniform1iARB ( m_positionID, 1 );
+	
+	glActiveTextureARB(GL_TEXTURE2_ARB);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, m_fboRenderTexture->getNormalsTexture());
+	glUniform1iARB ( m_normalsID, 2 );
+
+	// Render the quad
+	glLoadIdentity();
+	glColor3f(1,1,1);
+	glTranslatef(0,0,-1.0);
+	
+	glBegin(GL_QUADS);
+	glTexCoord2f( 0, 0 );
+	glVertex3f(    0.0f, 0.0f, 0.0f);
+	glTexCoord2f( 1, 0 );
+	glVertex3f(   (float) m_width, 0.0f, 0.0f);
+	glTexCoord2f( 1, 1 );
+	glVertex3f(   (float) m_width, (float) m_height, 0.0f);
+	glTexCoord2f( 0, 1 );
+	glVertex3f(    0.0f,  (float) m_height, 0.0f);
+	glEnd();
+	
+	// Reset OpenGL state
+	glActiveTextureARB(GL_TEXTURE0_ARB);
+	glDisable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glActiveTextureARB(GL_TEXTURE1_ARB);
+	glDisable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glActiveTextureARB(GL_TEXTURE2_ARB);
+	glDisable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glUseProgramObjectARB(0);
+	
+	//Reset to the matrices	
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
+/////////////////////////////////////////////////////////////
+	
     //phongShader->unbind();
     
     //Globals::point.draw(s2);
@@ -188,63 +253,77 @@ void Window::displayCallback() {
  * Sets up the GBuffer
  */
 void Window::setupGBuffer() {
-	//Setting up samplers
-	deferredPassShader->bind();
-	glUniform1i(glGetUniformLocation(deferredPassShader->getPid(), "gPosition"), 0);
-	glUniform1i(glGetUniformLocation(deferredPassShader->getPid(), "gNormal"), 1);
-	glUniform1i(glGetUniformLocation(deferredPassShader->getPid(), "gSpec"), 2);
-   
+	GLuint gPosition;
+	GLuint gNormal; 
+	GLuint gSpec;
+	GLunit depthBuffer
+  
 	//Setting up G-buffer
 	//Buffer is necessary so that shader can access data from all pixels when evaluating a certain pixel
 	GLuint gBuffer;
-	glGenFramebuffers(1, &gBuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, gBuffer));
-	
-	//Set up the 3 textures that go in the buffer 
-	//(Note: Depth is unnecessary since it can be calculated from gPosition and camera position)
-	
-	//Position buffer
-	GLuint gPosition, gNormal, gSpec;
-	glGenTextures(1, &gPosition);
-	glBindTexture(GL_TEXTURE_2D, gPosition);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Window::width, Window::height, 0, GL_RGB, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPosition, 0);
-	
-	//Normal Buffer
-	glGenTextures(1, &gNormal);
-	glBindTexture(GL_TEXTURE_2D, gNormal);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Window::width, Window::height, 0, GL_RGB, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormal, 0);
-	
-	//Specular buffer
-	glGenTextures(1, &gSpec);
-	glBindTexture(GL_TEXTURE_2D, gSpec);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, Window::width, Window::height, 0, GL_RGB, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gSpec, 0);
-	
-	//Specify which color attachments to use in this framebuffer
-	GLuint attachments[3] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-	glDrawBuffers(3, attachments);
+	glGenFramebuffersEXT(1, &gBuffer);
+	glGenRenderbuffersEXT(1, &gSpec);
+	glGenRenderbuffersEXT(1, &gPosition);
+	glGenRenderbuffersEXT(1, &gNormal);
+	glGenRenderbuffersEXT(1, &depthBuffer);
 
-	//Adding a depth buffer just because the tutorial has it
-	GLuint rboDepth;
-    glGenRenderbuffers(1, &rboDepth);
-    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gBuffer));
 	
-    //Make sure framebuffer is complete
-    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-        std::cout << "Framebuffer not complete!" << std::endl;
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	//Binding to render buffers is necessary in older versions of GLSL
+	
+	// Bind the diffuse render target
+	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, gSpec);
+	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_RGBA, Window::width, Window::height);
+	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_EXT, gSpec);
+	// Bind the position render target
+	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, gPosition);
+	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_RGBA32F_ARB, Window::width, Window::height);
+	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_RENDERBUFFER_EXT, gPosition);
+	// Bind the normal render target
+	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, gNormal);
+	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_RGBA16F_ARB, Window::width, Window::height);
+	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT2_EXT, GL_RENDERBUFFER_EXT, gNormal);
+	// Bind the depth buffer
+	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_depthBuffer);
+	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, Window::width, Window::height);
+	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthBuffer);
+	
+//Set up the 3 textures that go in the buffer 
+	// Generate and bind the OGL texture for diffuse
+	glGenTextures(1, &gSpecTexture);
+	glBindTexture(GL_TEXTURE_2D, gSpecTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Window::width, Window::height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, gSpecTexture, 0);
+
+	// Generate and bind the OGL texture for positions
+	glGenTextures(1, &gPositionTexture);
+	glBindTexture(GL_TEXTURE_2D, gPositionTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, Window::width, Window::height, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_2D, gPositionTexture, 0);
+
+	// Generate and bind the OGL texture for normals
+	glGenTextures(1, &gNormalTexture);
+	glBindTexture(GL_TEXTURE_2D, gNormalTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F_ARB, Window::width, Window::height, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT2_EXT, GL_TEXTURE_2D, gNormalTexture, 0);
+
+	GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+	if( status != GL_FRAMEBUFFER_COMPLETE_EXT)
+		throw new std::exception("Can't initialize an FBO render texture. FBO initialization failed.");
+
+    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 }
 
 

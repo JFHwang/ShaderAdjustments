@@ -1,11 +1,7 @@
-#version 330 core
-layout (location = 0) in vec3 position;
-layout (location = 1) in vec2 texCoords;
-
-out vec2 TexCoords;
-
-void main()
+void main( void )
 {
-    gl_Position = vec4(position, 1.0f);
-    TexCoords = texCoords;
+	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+	gl_TexCoord[0] = gl_MultiTexCoord0;
+
+    gl_FrontColor = vec4(1.0, 1.0, 1.0, 1.0);
 }
