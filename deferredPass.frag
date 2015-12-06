@@ -18,5 +18,5 @@ void main( void )
 	vec3 eyeDir = normalize(cameraPosition-position.xyz);
 	vec3 vHalfVector = normalize(lightDir.xyz+eyeDir);
 	
-	gl_FragColor = max(dot(normal,lightDir),0) * image + pow(max(dot(normal,vHalfVector),0.0), 100) * 1.5;
+	gl_FragColor = max(dot(normal.xyz,lightDir),0) * image + pow(max(dot(normal.xyz,vHalfVector),0.0), 100) * 1.5;
 }

@@ -1,3 +1,4 @@
+#version 130
 varying vec3 normals;
 varying vec4 position;
 uniform mat4 ModelMatrix;
