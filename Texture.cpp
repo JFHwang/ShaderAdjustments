@@ -55,6 +55,8 @@ Texture::~Texture() {
     //
 }
 
+
+
 void Texture::bind(void) {
     glBindTexture(GL_TEXTURE_2D, id);
 }

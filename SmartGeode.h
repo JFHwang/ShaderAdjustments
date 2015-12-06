@@ -26,9 +26,7 @@ public:
         mat.ambientColor = Color::blue();
         mat.diffuseColor = Color::blue();
         mat.specularColor = Color::white();
-        mat.emissionColor = Color::white();
-        
-        
+        mat.emissionColor = Color::white();  
     }
 
     SmartGeode(const SmartGeode& orig) : width(orig.width), height(orig.height) {

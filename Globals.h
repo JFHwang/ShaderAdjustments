@@ -34,72 +34,99 @@ template<typename T> inline void print(T output) {
 float frand(float a, float b);
 
 inline void cube() {
-   // Shader& s = *new Shader("VShader.c", "LShader.c");
+
+
+    // Shader& s = *new Shader("VShader.c", "LShader.c");
     // White side - BACK
     //s.bind();
+    glColor3f(1, 1, 1);
     glBegin(GL_QUADS);
     glNormal3f(0, 0, -1);
+    glTexCoord2f(0, 0);
     glVertex3f(0.5, -0.5, -0.5); // P1 is red
     glNormal3f(0, 0, -1);
+    glTexCoord2f(0, 1);
     glVertex3f(0.5, 0.5, -0.5); // P2 is green
     glNormal3f(0, 0, -1);
+    glTexCoord2f(1, 1);
     glVertex3f(-0.5, 0.5, -0.5); // P3 is blue
     glNormal3f(0, 0, -1);
+    glTexCoord2f(1, 0);
     glVertex3f(-0.5, -0.5, -0.5); // P4 is purple
 
 
 
     glNormal3f(0, 0, 1);
+    glTexCoord2f(0, 0);
     glVertex3f(0.5, -0.5, 0.5);
+    glTexCoord2f(0, 1);
     glNormal3f(0, 0, 1);
     glVertex3f(0.5, 0.5, 0.5);
+    glTexCoord2f(1, 1);
     glNormal3f(0, 0, 1);
     glVertex3f(-0.5, 0.5, 0.5);
+    glTexCoord2f(1, 0);
     glNormal3f(0, 0, 1);
     glVertex3f(-0.5, -0.5, 0.5);
 
     // Purple side - RIGHT
     glNormal3f(1, 0, 0);
+    glTexCoord2f(0, 0);
     glVertex3f(0.5, -0.5, -0.5);
     glNormal3f(1, 0, 0);
+    glTexCoord2f(1, 0);
     glVertex3f(0.5, 0.5, -0.5);
     glNormal3f(1, 0, 0);
+    glTexCoord2f(1,1);
     glVertex3f(0.5, 0.5, 0.5);
     glNormal3f(1, 0, 0);
+    glTexCoord2f(0, 1);
     glVertex3f(0.5, -0.5, 0.5);
 
     // Green side - LEFT
     glNormal3f(-1, 0, 0);
+    glTexCoord2f(0, 0);
     glVertex3f(-0.5, -0.5, 0.5);
     glNormal3f(-1, 0, 0);
+    glTexCoord2f(0, 1);
     glVertex3f(-0.5, 0.5, 0.5);
     glNormal3f(-1, 0, 0);
+    glTexCoord2f(1, 1);
     glVertex3f(-0.5, 0.5, -0.5);
     glNormal3f(-1, 0, 0);
+    glTexCoord2f(1, 0);
     glVertex3f(-0.5, -0.5, -0.5);
 
     // Blue side - TOP
     glNormal3f(0, 1, 0);
+    glTexCoord2f(1, 0);
     glVertex3f(0.5, 0.5, 0.5);
     glNormal3f(0, 1, 0);
+    glTexCoord2f(1, 1);
     glVertex3f(0.5, 0.5, -0.5);
     glNormal3f(0, 1, 0);
+    glTexCoord2f(0, 1);
     glVertex3f(-0.5, 0.5, -0.5);
     glNormal3f(0, 1, 0);
+    glTexCoord2f(0, 0);
     glVertex3f(-0.5, 0.5, 0.5);
 
     // Red side - BOTTOM
     glNormal3f(0, -1, 0);
+    glTexCoord2f(0, 0);
     glVertex3f(0.5, -0.5, -0.5);
     glNormal3f(0, -1, 0);
+    glTexCoord2f(0, 1);
     glVertex3f(0.5, -0.5, 0.5);
     glNormal3f(0, -1, 0);
+    glTexCoord2f(1, 1);
     glVertex3f(-0.5, -0.5, 0.5);
     glNormal3f(0, -1, 0);
+    glTexCoord2f(1, 0);
     glVertex3f(-0.5, -0.5, -0.5);
 
     glEnd();
-   // s.unbind();
+    // s.unbind();
 }
 
 class Globals {

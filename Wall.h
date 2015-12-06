@@ -13,6 +13,7 @@
 #include "SmartGeode.h"
 #include "Collidable.h"
 #include "Globals.h"
+#include "Texture.h"
 
 class Wall : public SmartGeode, public Collidable {
 public:
@@ -30,7 +31,10 @@ public:
     }
 
     virtual void render() {
+        Collidable::render();
+        Texture::getBackground()->bind();
         cube();
+        Texture::getBackground()->unbind();
     }
     
     

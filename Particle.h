@@ -33,10 +33,8 @@ public:
     void draw() {
         if (isAlive) {
             glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, color.ptr());
-            glColor4fv(color.ptr());
-
+            
             glBegin(GL_POINTS);
-
             glVertex3fv(point.ptr());
             glEnd();
         }
@@ -50,10 +48,6 @@ public:
         return isAlive;
     }
 
-    void reset(Vector3 p = Vector3(0, 0, 0)) {
-        point = p;
-        isAlive = true;
-    }
 
     virtual ~Particle() {
 

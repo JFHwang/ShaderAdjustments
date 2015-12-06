@@ -46,16 +46,18 @@ public:
 
     virtual void render() override {
         if (isInfinite || !isFinished) {
-            //  glDisable(GL_LIGHTING);
-            glEnable(GL_COLOR_MATERIAL);
+            //  glEnable(GL_COLOR_MATERIAL);
+           // glEnable(GL_POINT_SMOOTH);
 
+            glPointSize(source->size);
             for (auto& part : parts) {
                 part.draw();
             }
+            glPointSize(1);
+            glEnd();
             glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, Color::black().ptr());
 
-            glDisable(GL_COLOR_MATERIAL);
-            //  glEnable(GL_LIGHTING);
+            //  glDisable(GL_COLOR_MATERIAL);
         }
     }
 
@@ -90,9 +92,11 @@ public:
 private:
 
     void reset(Particle& part) {
-        part.reset(source->randOffset());
+        part.point = source->randOffset();
         part.speed = source->speedGenerator(part.point);
         part.color = source->colorGenerator();
+        part.isAlive = true;
+
         isFinished = false;
     }
 };

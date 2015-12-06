@@ -8,5 +8,7 @@
 #include "Game.h"
 #include "Ball.h"
 
-Ball* Game::ball = new Ball(Vector3(width/2, .5, height/2));
+Ball* Game::ball = new Ball(Vector3(width / 2, .5, height / 2));
 bool Game::isPaused = false;
+
+Paddle* Game::paddle = new Paddle(Vector3(width / 2, .5, height));

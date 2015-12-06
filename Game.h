@@ -16,6 +16,7 @@
 #include "Ball.h"
 #include "Window.h"
 #include "BasicParticles.h"
+#include "Texture.h"
 #include <vector>
 
 class Game : public MatrixNode {
@@ -30,6 +31,7 @@ public:
     static bool isPaused;
 
     static Ball* ball;
+    static Paddle* paddle;
 
     vector<Collidable*> walls;
     Material mat;
@@ -41,7 +43,6 @@ public:
         Wall* top = new Wall(Vector3(width / 2, .5, 0), width + 1, 1);
         Wall* left = new Wall(Vector3(0, .5, height / 2), 1, height);
         Wall* right = new Wall(Vector3(width, .5, height / 2), 1, height);
-        Paddle* paddle = new Paddle(Vector3(width / 2, .5, height));
         mat = top->mat;
 
         add(top);
@@ -77,7 +78,7 @@ public:
                 walls.push_back(brick);
             }
         }
-
+        mat.shininess = 120;
     }
 
     Game(const Game& orig) {
@@ -98,9 +99,12 @@ public:
 
         MatrixStack base(cur, Matrix4::makeScale(width, 1, height).applyOther(Matrix4::makeTranslate(width / 2, -.5, height / 2)));
 
+        
+        Texture::getBackground()->bind();
         renderWithMatrix(base.convert,{
             cube();
         });
+        Texture::getBackground()->unbind();
 
 
         for (auto& child : children) {
@@ -129,6 +133,12 @@ public:
             MatrixNode::update(tick);
             for (auto wall : walls) {
                 wall->handleCollisions(*ball);
+            }
+            
+            for(auto wall : walls){
+                if(wall != paddle){
+                    paddle->move(wall->isColliding(*paddle));
+                }
             }
         }
     }

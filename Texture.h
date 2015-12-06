@@ -24,6 +24,15 @@ public:
     void bind(void);
     void unbind(void);
 
+    static Texture* getBackground() {
+        static Texture* ret = NULL;
+
+        if(ret == NULL)
+            ret = new Texture("texture.ppm");
+        return ret;
+    }
+
+
 };
 
 #endif

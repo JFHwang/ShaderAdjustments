@@ -16,7 +16,7 @@ class Paddle : public SmartGeode, public Collidable {
 public:
     static constexpr float SPEED = .5f;
 
-    Paddle(Vector3 pos) : SmartGeode(pos, 6, 1), Collidable(pos, 6, 1) {
+    Paddle(Vector3 pos) : SmartGeode(pos, 7, 1.5), Collidable(pos, 7, 1.5) {
         mat.setAll(Color::randomBrightPastel());
     }
 
@@ -29,28 +29,35 @@ public:
     }
 
     virtual void render() override {
-        cube();
-    }
-
-    virtual void handleCollisions(Ball& b) {
-        c_center = getTranslation();
-        Collidable::handleCollisions(b);
+        Collidable::render();
+        mat.apply();
+        glutSolidSphere(.5, 50, 50);
     }
 
     virtual void update(int tick) override {
-
         if (Keys::isPressed('a'))
-            transform.applyOther(Matrix4::makeTranslate(-SPEED, 0, 0));
+            move(-1);
         else if (Keys::isPressed('d'))
-            transform.applyOther(Matrix4::makeTranslate(SPEED, 0, 0));
+            move(1);
 
         SmartGeode::update(tick);
     }
 
+    void move(int dir) {
+        if (dir == 0)
+            return;
+        else if (dir < 0)
+            transform.applyOther(Matrix4::makeTranslate(-SPEED, 0, 0));
+        else
+            transform.applyOther(Matrix4::makeTranslate(SPEED, 0, 0));
+
+        c_center = getTranslation();
+    }
+
     virtual void onCollision(Ball& b, Face side) override {
-        if (side != FRONT)
+        if (side != FRONT) {
             Collidable::onCollision(b, side);
-        else {
+        } else {
             const float ADJUSTMENT = .66;
 
             float adj = 0;

@@ -29,7 +29,7 @@ public:
     }
 
     virtual void update(Particle& p) const override {
-        p.color[3] = clampf(0, 1, p.color[3]*1.005);
+       // p.color[3] = clampf(0, 1, p.color[3]*1.005);
     }
 
     virtual Vector3 randOffset() const override {

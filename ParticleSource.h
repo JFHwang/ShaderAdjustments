@@ -16,6 +16,7 @@
 class ParticleSource {
 public:
     float survivalRate = 99.0f;
+    float size = 1.25f;
 
     virtual Vector3 speedGenerator(Vector3 position) const {
         return Vector3(frand(-1, 1), frand(-1, 1), frand(-1, 1)).normalize();
@@ -31,7 +32,8 @@ public:
     }
 
     virtual void update(Particle& p) const {
-        p.color[3] *= .995;
+     
+        
     }
 
 };

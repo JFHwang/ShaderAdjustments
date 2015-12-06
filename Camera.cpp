@@ -45,6 +45,8 @@ void Camera::set(Vector3& e, Vector3& d, Vector3& up) {
     update();
 }
 
+
+
 void Camera::translate(Vector3 t) {
     Vector3 n = t.negate();
     ci.applyOther(Matrix4().makeTranslate(n));

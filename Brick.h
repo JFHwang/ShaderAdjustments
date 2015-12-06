@@ -20,8 +20,11 @@ public:
 
     ParticleSystem particles;
 
-    Brick(Vector3 pos) : SmartGeode(pos, 1, .5), Collidable(pos, WIDTH, HEIGHT), particles(0, this, false), isVisible(true) {
+    Brick(Vector3 pos) : SmartGeode(pos, WIDTH, HEIGHT), Collidable(pos, WIDTH, HEIGHT), particles(0, this, false), isVisible(true) {
         survivalRate = 96;
+        mat.setAll(Color::red());
+        mat.shininess = 8;
+        
     }
 
     Brick(const Brick& orig) : SmartGeode(orig), Collidable(orig), particles(orig.particles) {
@@ -37,42 +40,47 @@ public:
 
 
         MatrixStack stack = old.push(transform);
-        if (isVisible) {
-            renderWithMatrix(stack.convert,{
-                render();
-            });
-        } else
+        renderWithMatrix(stack.convert,{
+            render();
+        });
+
+        if (!isVisible)
             particles.draw(stack);
+
     }
-    
-    
 
     virtual void update(int tick) override {
         particles.update(tick);
     }
 
-
     void render() override {
         Collidable::render();
-        glutSolidCube(1);
+        if (isVisible) {
+            mat.apply();
+            cube();
+        }
     }
 
     virtual Vector3 speedGenerator(Vector3 position) const {
-        return (position).normalize().scale(1.0f/30);
+        return (position).normalize().scale(1.0f / 10);
     }
 
+    virtual void update(Particle& p) const {
+        p.speed = p.speed.scale(.965);
+    }
+    
     virtual Color colorGenerator() const {
-        return Color::green();
+        return mat.ambientColor;
     }
 
     virtual Vector3 randOffset() const {
-        return Vector3(frand(-WIDTH / 2, WIDTH / 2), frand(0, .5), frand(-HEIGHT / 2, HEIGHT / 2));
+        return Vector3(frand(-WIDTH / 2, WIDTH / 2), frand(-.5, .5), frand(-HEIGHT / 2, HEIGHT / 2));
     }
 
     virtual void onCollision(Ball& b, Face side) override {
         Collidable::onCollision(b, side);
         isVisible = false;
-        particles.reset(200000);
+        particles.reset(20000);
 
     }
 
