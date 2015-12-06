@@ -142,17 +142,13 @@ void Window::displayCallback() {
 //    MatrixStack s2 = stack;
 
 	//phongShader->bind();
-    
-	
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	
-	geometryPassShader->bind();
-
+	
 ////////////////////////////////////////////////////////////////	
 ///////This section is taken directly from the example code///////
-///////////Not sure if right///////////////////////////
+///////////Gets the textures??///////////////////////////
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gBuffer);
 	glPushAttrib(GL_VIEWPORT_BIT);
 	glViewport(0,0,Window::width, Window::height);
 
@@ -169,8 +165,10 @@ void Window::displayCallback() {
 /////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
 	game->draw(stack);
-	geometryPassShader->unbind();
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 	glPopAttrib();  /////////Not sure about this line either
+	
+	
 	
 	//render using 2nd pass shader
 ////////////////////////////////////////////////////////////////
@@ -186,21 +184,21 @@ void Window::displayCallback() {
 	glPushMatrix();
 	
 	glUseProgramObjectARB(deferredPassShader->getPid());
-
+	
 	glActiveTextureARB(GL_TEXTURE0_ARB);
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, gSpecTexture);
-	glUniform1iARB ( specID, 0 );
+	glBindTexture(GL_TEXTURE_2D, gPositionTexture);
+	glUniform1iARB ( positionID, 0 );
 	
 	glActiveTextureARB(GL_TEXTURE1_ARB);
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, gPositionTexture);
-	glUniform1iARB ( positionID, 1 );
+	glBindTexture(GL_TEXTURE_2D, gNormalTexture);
+	glUniform1iARB ( normalID, 1 );
 	
 	glActiveTextureARB(GL_TEXTURE2_ARB);
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, gNormalTexture);
-	glUniform1iARB ( normalID, 2 );
+	glBindTexture(GL_TEXTURE_2D, gSpecTexture);
+	glUniform1iARB ( specID, 2 );
 
 	// Render the quad
 	glLoadIdentity();
@@ -246,7 +244,7 @@ void Window::displayCallback() {
     
    // Globals::point.draw(Globals::drawData);
    // Globals::spotLight.draw(Globals::drawData);
-
+game->draw(stack);
     //Pop off the changes we made to the matrix stack this frame
     glPopMatrix();
 
