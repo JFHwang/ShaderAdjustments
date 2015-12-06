@@ -36,8 +36,14 @@ GLuint specID;
 GLuint gPositionTexture;
 GLuint gNormalTexture;
 GLuint gSpecTexture;
+GLuint gPosition;
+GLuint gNormal; 
+GLuint gSpec;
+GLuint depthBuffer;
+GLuint gBuffer;
 
 void Window::initialize(void) {
+    glewInit();
     //Setup the light
     Globals::point.setPosition(Vector4(-66, -100, -66.5, 500));
     Globals::point.quadraticAttenuation = 1.15;
@@ -56,6 +62,7 @@ void Window::initialize(void) {
 	positionID = glGetUniformLocationARB(deferredPassShader->getPid(),"gPosition");
 	normalID = glGetUniformLocationARB(deferredPassShader->getPid(),"gNormal");
 	specID = glGetUniformLocationARB(deferredPassShader->getPid(),"gSpec");
+
 	
 	setupGBuffer();	
 }
@@ -256,14 +263,9 @@ void Window::displayCallback() {
  * Sets up the GBuffer
  */
 void Window::setupGBuffer() {
-	GLuint gPosition;
-	GLuint gNormal; 
-	GLuint gSpec;
-	GLuint depthBuffer;
-        
 	//Setting up G-buffer
 	//Buffer is necessary so that shader can access data from all pixels when evaluating a certain pixel
-	GLuint gBuffer;
+	
 	glGenFramebuffersEXT(1, &gBuffer);
 	glGenRenderbuffersEXT(1, &gSpec);
 	glGenRenderbuffersEXT(1, &gPosition);

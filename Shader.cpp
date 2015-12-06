@@ -60,6 +60,10 @@ void Shader::unbind() {
     }
 }
 
+GLhandleARB Shader::getPid() {
+    return pid;
+}
+
 void Shader::printLog(const char* tag) {
     char glslLog[1024];
     GLsizei glslLogSize;
@@ -132,12 +136,7 @@ void Shader::setup(const char *vs, const char *fs) {
     //Attach the Vertex and Fragment shaders to the Shader Program
     glAttachObjectARB(pid, vid);
     glAttachObjectARB(pid, fid);
-/*
-	glGenTextures(1, &depthBuffer);
-	glBindTexture(GL_TEXTURE_2D, depthBuffer);
-*/
-	
-	
+
     //Delete shader objects since they have been attached to a program
     glDeleteObjectARB(vid);
     glDeleteObjectARB(fid);
