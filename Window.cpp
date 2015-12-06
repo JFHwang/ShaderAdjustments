@@ -1,5 +1,5 @@
 #include <iostream>
-
+#include <GL/glew.h>
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #else
@@ -256,8 +256,11 @@ void Window::setupGBuffer() {
 	GLuint gPosition;
 	GLuint gNormal; 
 	GLuint gSpec;
-	GLunit depthBuffer
-  
+	GLuint depthBuffer;
+        GLuint gPositionTexture;
+        GLuint gNormalTexture;
+        GLuint gSpecTexture;
+        
 	//Setting up G-buffer
 	//Buffer is necessary so that shader can access data from all pixels when evaluating a certain pixel
 	GLuint gBuffer;
@@ -267,7 +270,7 @@ void Window::setupGBuffer() {
 	glGenRenderbuffersEXT(1, &gNormal);
 	glGenRenderbuffersEXT(1, &depthBuffer);
 
-	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gBuffer));
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gBuffer);
 	
 	//Binding to render buffers is necessary in older versions of GLSL
 	
@@ -284,9 +287,9 @@ void Window::setupGBuffer() {
 	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_RGBA16F_ARB, Window::width, Window::height);
 	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT2_EXT, GL_RENDERBUFFER_EXT, gNormal);
 	// Bind the depth buffer
-	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_depthBuffer);
+	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, depthBuffer);
 	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, Window::width, Window::height);
-	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthBuffer);
+	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, depthBuffer);
 	
 //Set up the 3 textures that go in the buffer 
 	// Generate and bind the OGL texture for diffuse
@@ -321,7 +324,7 @@ void Window::setupGBuffer() {
 
 	GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
 	if( status != GL_FRAMEBUFFER_COMPLETE_EXT)
-		throw new std::exception("Can't initialize an FBO render texture. FBO initialization failed.");
+            std::cout << "Error with framebuffer or something" << std::endl;
 
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 }
