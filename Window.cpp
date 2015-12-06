@@ -50,9 +50,9 @@ void Window::initialize(void) {
  
     glEnable(GL_NORMALIZE);
 	
-	positionID = glGetUniformLocationARB(deferredPassShader.getPid(),"gPosition");
-	normalsID = glGetUniformLocationARB(deferredPassShader.getPid(),"gNormals");
-	specID = glGetUniformLocationARB(deferredPassShader.getPid(),"gSpec");
+	positionID = glGetUniformLocationARB(deferredPassShader->getPid(),"gPosition");
+	normalID = glGetUniformLocationARB(deferredPassShader->getPid(),"gNormal");
+	specID = glGetUniformLocationARB(deferredPassShader->getPid(),"gSpec");
 	
 	setupGBuffer();	
 }
@@ -127,12 +127,12 @@ void Window::displayCallback() {
 
     game->ball->ballLight.setPosition(game->ball->getTranslation());
     game->ball->ballLight.bind();
-      
+*/  
     MatrixStack stack(Matrix4::identity());
-    MatrixStack s2 = stack;
+//    MatrixStack s2 = stack;
 
 	//phongShader->bind();
-*/    
+    
 	
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -144,7 +144,7 @@ void Window::displayCallback() {
 ///////This section is taken directly from the example code///////
 ///////////Not sure if right///////////////////////////
 	glPushAttrib(GL_VIEWPORT_BIT);
-	glViewport(0,0,m_width, m_height);
+	glViewport(0,0,Window::width, Window::height);
 
 	// Clear the render targets
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
@@ -169,28 +169,28 @@ void Window::displayCallback() {
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	glOrtho(0,m_width,0,m_height,0.1f,2);	
+	glOrtho(0,Window::width,0,Window::height,0.1f,2);	
 	
 	//Model setup
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	
-	glUseProgramObjectARB(m_shader.m_programHandler);
+	glUseProgramObjectARB(deferredPassShader->getPid());
 
 	glActiveTextureARB(GL_TEXTURE0_ARB);
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, m_fboRenderTexture->getDiffuseTexture());
-	glUniform1iARB ( m_diffuseID, 0 );
+	glBindTexture(GL_TEXTURE_2D, geometryPassShader->getDiffuseTexture());
+	glUniform1iARB ( specID, 0 );
 	
 	glActiveTextureARB(GL_TEXTURE1_ARB);
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, m_fboRenderTexture->getPositionTexture());
-	glUniform1iARB ( m_positionID, 1 );
+	glUniform1iARB ( positionID, 1 );
 	
 	glActiveTextureARB(GL_TEXTURE2_ARB);
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, m_fboRenderTexture->getNormalsTexture());
-	glUniform1iARB ( m_normalsID, 2 );
+	glUniform1iARB ( normalID, 2 );
 
 	// Render the quad
 	glLoadIdentity();
@@ -201,11 +201,11 @@ void Window::displayCallback() {
 	glTexCoord2f( 0, 0 );
 	glVertex3f(    0.0f, 0.0f, 0.0f);
 	glTexCoord2f( 1, 0 );
-	glVertex3f(   (float) m_width, 0.0f, 0.0f);
+	glVertex3f(   (float) Window::width, 0.0f, 0.0f);
 	glTexCoord2f( 1, 1 );
-	glVertex3f(   (float) m_width, (float) m_height, 0.0f);
+	glVertex3f(   (float) Window::width, (float) Window::height, 0.0f);
 	glTexCoord2f( 0, 1 );
-	glVertex3f(    0.0f,  (float) m_height, 0.0f);
+	glVertex3f(    0.0f,  (float) Window::height, 0.0f);
 	glEnd();
 	
 	// Reset OpenGL state
