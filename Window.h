@@ -22,6 +22,7 @@ public:
     static void mouseClick(int butt, int state, int x, int y);
     static void mouseMove(int x, int y);
 	static void setupGBuffer();
+	static void renderQuad();
 };
 
 #endif

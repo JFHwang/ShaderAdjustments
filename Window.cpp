@@ -60,7 +60,6 @@ void Window::initialize(void) {
 	normalID = glGetUniformLocationARB(deferredPassShader->getPid(),"gNormal");
 	specID = glGetUniformLocationARB(deferredPassShader->getPid(),"gSpec");
 
-	
 	setupGBuffer();	
 }
 
@@ -127,7 +126,7 @@ void Window::displayCallback() {
     //This will convert all world coordiantes into camera coordiantes
     glLoadMatrixf(Globals::camera.getInverseMatrix().ptr());
 
-	Globals::directional.bind();
+	//Globals::directional.bind();
 /*  Globals::spotLight.bind();
     Globals::point.setPosition(game->ball->getTranslation());
     Globals::point.bind();
@@ -140,115 +139,66 @@ void Window::displayCallback() {
 
 	//phongShader->bind();
 
-////////////////////////////////////////////////////////////////	
-///////This section is taken directly from the example code///////
-///////////Gets the textures??///////////////////////////
+	//Write to the gBuffer
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gBuffer);
-	glPushAttrib(GL_VIEWPORT_BIT);
-	glViewport(0,0,Window::width, Window::height);
-
-	// Clear the render targets
-	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
-
-	glActiveTextureARB(GL_TEXTURE2_ARB);
-	glEnable(GL_TEXTURE_2D);
-
-	// Specify what to render and start acquiring
-	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_COLOR_ATTACHMENT2_EXT };
-	glDrawBuffers(3, buffers);
-/////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////
-	geometryPassShader->bind();
-	game->draw(stack);
-	geometryPassShader->unbind();
+	glPushAttrib(GL_VIEWPORT_BIT); 		//Saves viewport info easier
+		glViewport(0,0,width, height);	//Makes sure we render a size matching the framebuffer
+		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+		geometryPassShader->bind();		//Write to the gBuffer using the geometryPassShader
+		game->draw(stack);				//Render image
+		geometryPassShader->unbind();
+	glPopAttrib();
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-	glPopAttrib();  /////////Not sure about this line either
-	
-	
+
 	
 	//render using 2nd pass shader
 ////////////////////////////////////////////////////////////////
 //////Code taken directly from source code//////////////////////
 	//Projection setup
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	glOrtho(0,Window::width,0,Window::height,0.1f,2);	
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
-	//Model setup
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
+    deferredPassShader->bind();
 	
-	glUseProgramObjectARB(deferredPassShader->getPid());
-	
-	glActiveTextureARB(GL_TEXTURE0_ARB);
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, gPosition);
-	glUniform1iARB ( positionID, 0 );
-	
-	glActiveTextureARB(GL_TEXTURE1_ARB);
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, gNormal);
-	glUniform1iARB ( normalID, 1 );
-	
-	glActiveTextureARB(GL_TEXTURE2_ARB);
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, gSpec);
-	glUniform1iARB ( specID, 2 );
-
-	// Render the quad
-	glLoadIdentity();
-	glColor3f(1,1,1);
-	glTranslatef(0,0,-1.0);
-	
-	glBegin(GL_QUADS);
-	glTexCoord2f( 0, 0 );
-	glVertex3f(    0.0f, 0.0f, 0.0f);
-	glTexCoord2f( 1, 0 );
-	glVertex3f(   (float) Window::width, 0.0f, 0.0f);
-	glTexCoord2f( 1, 1 );
-	glVertex3f(   (float) Window::width, (float) Window::height, 0.0f);
-	glTexCoord2f( 0, 1 );
-	glVertex3f(    0.0f,  (float) Window::height, 0.0f);
-	glEnd();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, gPosition);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, gNormal);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, gSpec);
+		
+	renderQuad();
 	
 	// Reset OpenGL state
 	glActiveTextureARB(GL_TEXTURE0_ARB);
 	glDisable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
-
 	glActiveTextureARB(GL_TEXTURE1_ARB);
 	glDisable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
-
 	glActiveTextureARB(GL_TEXTURE2_ARB);
 	glDisable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glUseProgramObjectARB(0);
+	deferredPassShader->unbind();
 	
 	//Reset to the matrices	
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
-/////////////////////////////////////////////////////////////
-	
+/*
     //phongShader->unbind();
     
     //Globals::point.draw(s2);
     
    // Globals::point.draw(Globals::drawData);
    // Globals::spotLight.draw(Globals::drawData);
-game->draw(stack);
     //Pop off the changes we made to the matrix stack this frame
+*/
     glPopMatrix();
-
 
     glFlush();
     glutSwapBuffers();
-
 }
 
 
@@ -295,14 +245,34 @@ void Window::setupGBuffer() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT2_EXT, GL_TEXTURE_2D, gNormal, 0);
 
+	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_COLOR_ATTACHMENT2_EXT };
+	glDrawBuffers(3, buffers);
+
 	GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
 	if( status != GL_FRAMEBUFFER_COMPLETE_EXT)
             std::cout << "Error with framebuffer or something" << std::endl;
 
     glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
 }
 
-
+void Window::renderQuad() {
+	// Render the quad
+	glLoadIdentity();
+	glColor3f(1,1,1);
+	glTranslatef(0,0,-1.0);
+	
+	glBegin(GL_QUADS);
+	glTexCoord2f( 0, 0 );
+	glVertex3f(    0.0f, 0.0f, 0.0f);
+	glTexCoord2f( 1, 0 );
+	glVertex3f(   (float) Window::width, 0.0f, 0.0f);
+	glTexCoord2f( 1, 1 );
+	glVertex3f(   (float) Window::width, (float) Window::height, 0.0f);
+	glTexCoord2f( 0, 1 );
+	glVertex3f(    0.0f,  (float) Window::height, 0.0f);
+	glEnd();
+}
 
 
 const float scaleFactor = .95;
