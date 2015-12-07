@@ -148,10 +148,11 @@ void Window::displayCallback() {
 		
 		GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_COLOR_ATTACHMENT2_EXT };
 		glDrawBuffers(3, buffers);
-		
+		float worldMatrix[16];
+		glGetFloatv(GL_MODELVIEW_MATRIX, worldMatrix);
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		geometryPassShader->bind();		//Write to the gBuffer using the geometryPassShader
-		glUniformMatrix4fvARB ( worldMatrixID, 1, false, GL_MODELVIEW_MATRIX);
+		glUniformMatrix4fvARB ( worldMatrixID, 1, false, worldMatrix);
 		game->draw(stack);				//Render image
 		geometryPassShader->unbind();
 	glPopAttrib();
