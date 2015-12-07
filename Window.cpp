@@ -256,22 +256,34 @@ void Window::setupGBuffer() {
 	glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
 }
 
+
+GLuint quadVAO = 0;
 void Window::renderQuad() {
-	// Render the quad
-	glLoadIdentity();
-	glColor3f(1,1,1);
-	glTranslatef(0,0,-1.0);
-	
-	glBegin(GL_QUADS);
-	glTexCoord2f( 0, 0 );
-	glVertex3f(    0.0f, 0.0f, 0.0f);
-	glTexCoord2f( 1, 0 );
-	glVertex3f(   (float) Window::width, 0.0f, 0.0f);
-	glTexCoord2f( 1, 1 );
-	glVertex3f(   (float) Window::width, (float) Window::height, 0.0f);
-	glTexCoord2f( 0, 1 );
-	glVertex3f(    0.0f,  (float) Window::height, 0.0f);
-	glEnd();
+{
+    if (quadVAO == 0)
+    {
+        GLfloat quadVertices[] = {
+            // Positions        // Texture Coords
+            -1.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+            1.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+            1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+        };
+        // Setup plane VAO
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+    }
+    glBindVertexArray(quadVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+}
 }
 
 
