@@ -159,12 +159,20 @@ void Window::displayCallback() {
 	
     deferredPassShader->bind();
 	
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTextureARB(GL_TEXTURE0_ARB);
+	glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gPosition);
-    glActiveTexture(GL_TEXTURE1);
+	glUniform1iARB ( positionID, 0 );
+	
+    glActiveTextureARB(GL_TEXTURE1_ARB);
+	glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, gNormal);
-    glActiveTexture(GL_TEXTURE2);
+	glUniform1iARB ( normalID, 1 );
+	
+    glActiveTextureARB(GL_TEXTURE2_ARB);
+	glEnable(GL_TEXTURE_2D);	
     glBindTexture(GL_TEXTURE_2D, gSpec);
+	glUniform1iARB ( specID, 2 );
 		
 	renderQuad();
 	
@@ -180,7 +188,7 @@ void Window::displayCallback() {
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	deferredPassShader->unbind();
-	
+/*	
 	//Reset to the matrices	
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
@@ -197,7 +205,7 @@ void Window::displayCallback() {
 */
     glPopMatrix();
 
-    glFlush();
+  //  glFlush();
     glutSwapBuffers();
 }
 
@@ -260,7 +268,6 @@ void Window::setupGBuffer() {
 GLuint quadVAO = 0;
 GLuint quadVBO = 0;
 void Window::renderQuad() {
-{
     if (quadVAO == 0)
     {
         GLfloat quadVertices[] = {
@@ -284,7 +291,6 @@ void Window::renderQuad() {
     glBindVertexArray(quadVAO);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
-}
 }
 
 
