@@ -180,7 +180,7 @@ void Window::displayCallback() {
     glBindTexture(GL_TEXTURE_2D, gSpec);
 	glUniform1iARB ( specID, 2 );
 	
-	glUniform3fv(cameraID, Globals::camera.e);
+	glUniform3fv(cameraID, 3, Globals::camera.e);
 	
 	renderQuad();
 	
