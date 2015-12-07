@@ -33,9 +33,9 @@ static Shader* deferredPassShader = NULL;
 GLuint positionID;
 GLuint normalID;
 GLuint specID;
-GLuint gPositionTexture;
-GLuint gNormalTexture;
-GLuint gSpecTexture;
+GLuint gPosition;
+GLuint gNormal;
+GLuint gSpec;
 GLuint gPosition;
 GLuint gNormal; 
 GLuint gSpec;
@@ -143,8 +143,6 @@ void Window::displayCallback() {
 
 	//phongShader->bind();
 
-	
-	
 ////////////////////////////////////////////////////////////////	
 ///////This section is taken directly from the example code///////
 ///////////Gets the textures??///////////////////////////
@@ -156,15 +154,17 @@ void Window::displayCallback() {
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 	glClearColor( 0.0f, 0.0f, 0.0f, 1.0f );
 
-	glActiveTextureARB(GL_TEXTURE0_ARB);
+	glActiveTextureARB(GL_TEXTURE2_ARB);
 	glEnable(GL_TEXTURE_2D);
 
-	// Specify what to render an start acquiring
+	// Specify what to render and start acquiring
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_COLOR_ATTACHMENT2_EXT };
 	glDrawBuffers(3, buffers);
 /////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
+	geometryPassShader->bind();
 	game->draw(stack);
+	geometryPassShader->unbind();
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 	glPopAttrib();  /////////Not sure about this line either
 	
@@ -187,17 +187,17 @@ void Window::displayCallback() {
 	
 	glActiveTextureARB(GL_TEXTURE0_ARB);
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, gPositionTexture);
+	glBindTexture(GL_TEXTURE_2D, gPosition);
 	glUniform1iARB ( positionID, 0 );
 	
 	glActiveTextureARB(GL_TEXTURE1_ARB);
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, gNormalTexture);
+	glBindTexture(GL_TEXTURE_2D, gNormal);
 	glUniform1iARB ( normalID, 1 );
 	
 	glActiveTextureARB(GL_TEXTURE2_ARB);
 	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, gSpecTexture);
+	glBindTexture(GL_TEXTURE_2D, gSpec);
 	glUniform1iARB ( specID, 2 );
 
 	// Render the quad
@@ -265,62 +265,38 @@ void Window::setupGBuffer() {
 	//Buffer is necessary so that shader can access data from all pixels when evaluating a certain pixel
 	
 	glGenFramebuffersEXT(1, &gBuffer);
-	glGenRenderbuffersEXT(1, &gSpec);
-	glGenRenderbuffersEXT(1, &gPosition);
-	glGenRenderbuffersEXT(1, &gNormal);
-	glGenRenderbuffersEXT(1, &depthBuffer);
-
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gBuffer);
-	
-	//Binding to render buffers is necessary in older versions of GLSL
-	
-	// Bind the diffuse render target
-	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, gSpec);
-	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_RGBA, Window::width, Window::height);
-	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_EXT, gSpec);
-	// Bind the position render target
-	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, gPosition);
-	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_RGBA32F_ARB, Window::width, Window::height);
-	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_RENDERBUFFER_EXT, gPosition);
-	// Bind the normal render target
-	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, gNormal);
-	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_RGBA16F_ARB, Window::width, Window::height);
-	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT2_EXT, GL_RENDERBUFFER_EXT, gNormal);
-	// Bind the depth buffer
-	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, depthBuffer);
-	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, Window::width, Window::height);
-	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, depthBuffer);
-	
+			
 //Set up the 3 textures that go in the buffer 
 	// Generate and bind the OGL texture for diffuse
-	glGenTextures(1, &gSpecTexture);
-	glBindTexture(GL_TEXTURE_2D, gSpecTexture);
+	glGenTextures(1, &gSpec);
+	glBindTexture(GL_TEXTURE_2D, gSpec);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Window::width, Window::height, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, gSpecTexture, 0);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, gSpec, 0);
 
 	// Generate and bind the OGL texture for positions
-	glGenTextures(1, &gPositionTexture);
-	glBindTexture(GL_TEXTURE_2D, gPositionTexture);
+	glGenTextures(1, &gPosition);
+	glBindTexture(GL_TEXTURE_2D, gPosition);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, Window::width, Window::height, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_2D, gPositionTexture, 0);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_2D, gPosition, 0);
 
 	// Generate and bind the OGL texture for normals
-	glGenTextures(1, &gNormalTexture);
-	glBindTexture(GL_TEXTURE_2D, gNormalTexture);
+	glGenTextures(1, &gNormal);
+	glBindTexture(GL_TEXTURE_2D, gNormal);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F_ARB, Window::width, Window::height, 0, GL_RGBA, GL_FLOAT, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT2_EXT, GL_TEXTURE_2D, gNormalTexture, 0);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT2_EXT, GL_TEXTURE_2D, gNormal, 0);
 
 	GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
 	if( status != GL_FRAMEBUFFER_COMPLETE_EXT)
