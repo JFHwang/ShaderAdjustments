@@ -272,7 +272,7 @@ void Window::renderQuad() {
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	glOrtho(0,m_width,0,m_height,0.1f,2);	
+	glOrtho(0,Window::width,0,Window::height,0.1f,2);	
 	
 	//Model setup
 	glMatrixMode(GL_MODELVIEW);
@@ -287,11 +287,11 @@ void Window::renderQuad() {
 	glTexCoord2f( 0, 0 );
 	glVertex3f(    0.0f, 0.0f, 0.0f);
 	glTexCoord2f( 1, 0 );
-	glVertex3f(   (float) m_width, 0.0f, 0.0f);
+	glVertex3f(   (float) Window::width, 0.0f, 0.0f);
 	glTexCoord2f( 1, 1 );
-	glVertex3f(   (float) m_width, (float) m_height, 0.0f);
+	glVertex3f(   (float) Window::width, (float) Window::height, 0.0f);
 	glTexCoord2f( 0, 1 );
-	glVertex3f(    0.0f,  (float) m_height, 0.0f);
+	glVertex3f(    0.0f,  (float) Window::height, 0.0f);
 	glEnd();
 	
 	//Reset to the matrices	
