@@ -258,6 +258,7 @@ void Window::setupGBuffer() {
 
 
 GLuint quadVAO = 0;
+GLuint quadVBO = 0;
 void Window::renderQuad() {
 {
     if (quadVAO == 0)
