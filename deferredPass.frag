@@ -21,5 +21,5 @@ void main( void )
 	gl_FragColor = max(dot(normal.xyz,lightDir),0) * image + pow(max(dot(normal.xyz,vHalfVector),0.0), 100) * 1.5;
 	
 	//Make everything red
-	gl_FragColor = image;
+	//gl_FragColor = image;
 }
