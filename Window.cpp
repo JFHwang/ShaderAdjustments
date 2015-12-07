@@ -59,7 +59,8 @@ void Window::initialize(void) {
 	positionID = glGetUniformLocationARB(deferredPassShader->getPid(),"gPosition");
 	normalID = glGetUniformLocationARB(deferredPassShader->getPid(),"gNormal");
 	specID = glGetUniformLocationARB(deferredPassShader->getPid(),"gSpec");
-
+	worldMatrixID = glGetUniformLocationARB(geometryPassShader->getPid(),"WorldMatrix");
+	
 	setupGBuffer();	
 }
 
@@ -143,8 +144,13 @@ void Window::displayCallback() {
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, gBuffer);
 	glPushAttrib(GL_VIEWPORT_BIT); 		//Saves viewport info easier
 		glViewport(0,0,width, height);	//Makes sure we render a size matching the framebuffer
+		
+		GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_COLOR_ATTACHMENT2_EXT };
+		glDrawBuffers(3, buffers);
+		
 		glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 		geometryPassShader->bind();		//Write to the gBuffer using the geometryPassShader
+		glUniformMatrix4fvARB ( m_worldMatrixID, 1, false, GL_MODELVIEW_MATRIX);
 		game->draw(stack);				//Render image
 		geometryPassShader->unbind();
 	glPopAttrib();
@@ -252,10 +258,10 @@ void Window::setupGBuffer() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT2_EXT, GL_TEXTURE_2D, gNormal, 0);
-
+/*
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_COLOR_ATTACHMENT2_EXT };
 	glDrawBuffers(3, buffers);
-
+*/
 	GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
 	if( status != GL_FRAMEBUFFER_COMPLETE_EXT)
             std::cout << "Error with framebuffer or something" << std::endl;
