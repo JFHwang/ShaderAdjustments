@@ -36,9 +36,6 @@ GLuint specID;
 GLuint gPosition;
 GLuint gNormal;
 GLuint gSpec;
-GLuint gPosition;
-GLuint gNormal; 
-GLuint gSpec;
 GLuint depthBuffer;
 GLuint gBuffer;
 
