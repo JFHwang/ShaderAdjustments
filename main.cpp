@@ -34,8 +34,9 @@ int main(int argc, char *argv[]) {
     glDisable(GL_CULL_FACE); //Disable backface culling to render both sides of polygons
     glShadeModel(GL_SMOOTH); //Set shading to smooth
 
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//glEnable(GL_BLEND);
+//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_BLEND);
     //  glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     //  glEnable(GL_LIGHTING); //Enable lighting
